@@ -16,8 +16,7 @@
 /* initSocketAddress
 * Initialises a sockaddr_in struct given a host name and a port.
 */
-void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short int port)
-{
+void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short int port) {
 	struct hostent *hostInfo; /* Contains info about the host */
 
 	/* Socket address format set to AF_INET for internet use. */
@@ -28,8 +27,7 @@ void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short 
 
 	/* Get info about host. */
 	hostInfo = gethostbyname(hostName);
-	if(hostInfo == NULL)
-	{
+	if(hostInfo == NULL) {
 		fprintf(stderr, "initSocketAddress - Unknown host %s\n",hostName);
 		exit(EXIT_FAILURE);
 	}
@@ -37,37 +35,32 @@ void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short 
 	name->sin_addr = *(struct in_addr *)hostInfo->h_addr;
 }
 
-
 /* writeMessage
 * Writes the string message to the file (socket)
 * denoted by fileDescriptor.
 */
-void writeMessage(int fileDescriptor, char *message)
-{
+void writeMessage(int fileDescriptor, char *message) {
 	int nOfBytes;
 
 	nOfBytes = write(fileDescriptor, message, strlen(message) + 1);
-	if(nOfBytes < 0)
-	{
+	if(nOfBytes < 0) {
 		perror("writeMessage - Could not write data\n");
 		exit(EXIT_FAILURE);
 	}
 }
-int readMessage(int fileDescriptor)
-{
+
+int readMessage(int fileDescriptor) {
 	int nOfBytes;
 	char buffer[MAXMSG];
 	nOfBytes = read(fileDescriptor, buffer, MAXMSG);
-	if(nOfBytes < 0)
-	{
+	if(nOfBytes < 0) {
         return 0;
 	}
 	printf("Message received from server: %s\n", buffer);
 	return 1;
 }
 
-void choppy(char *a)
-{
+void choppy(char *a) {
 	int len;
 
 	len = strlen(a);
@@ -75,8 +68,7 @@ void choppy(char *a)
     		a[len-1] = '\0';
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int sock, i;
 	struct sockaddr_in serverName;
 	char hostName[hostNameLength];
@@ -85,28 +77,24 @@ int main(int argc, char *argv[])
 	FILE *transaction;
 
 	/* Check arguments */
-	if(argv[1] == NULL)
-	{
+	if(argv[1] == NULL) {
 		perror("Usage: client [host name]\n");
 		exit(EXIT_FAILURE);
 	}
-	else
-	{
+	else {
 		strncpy(hostName, argv[1], hostNameLength);
 		hostName[hostNameLength - 1] = '\0';
 	}
 	/* Create the socket */
 	sock = socket(PF_INET, SOCK_STREAM, 0);
-	if(sock < 0)
-	{
+	if(sock < 0) {
 		perror("Could not create a socket\n");
 		exit(EXIT_FAILURE);
 	}
 	/* Initialise the socket address */
 	initSocketAddress(&serverName, hostName, PORT);
 	/* Connect to the server */
-	if(connect(sock, (struct sockaddr *)&serverName, sizeof(serverName)) < 0)
-	{
+	if(connect(sock, (struct sockaddr *)&serverName, sizeof(serverName)) < 0) {
 		perror("Could not connect to server\n");
 		exit(EXIT_FAILURE);
 	}
@@ -119,40 +107,31 @@ int main(int argc, char *argv[])
 	printf("Type 'quit' to nuke this program.\n");
 	fflush(stdin);
 
-	while(1)
-	{
+	while(1) {
 		readFdSet=activeFdSet;
-		if(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0)
-		{
+		if(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
 			perror("Select failed\n");
 			continue;
 		}
-		for(i = 0; i < FD_SETSIZE; ++i)
-		{
-			if(FD_ISSET(i, &readFdSet))
-			{
-				if(i==STDIN)
-				{
+		for(i = 0; i < FD_SETSIZE; ++i) {
+			if(FD_ISSET(i, &readFdSet)) {
+				if(i==STDIN) {
 					fgets(messageString, MAXMSG, stdin);
 					messageString[MAXMSG - 1] = '\0';
-					if(strncmp(messageString, "quit\n", MAXMSG))
-					{
+					if(strncmp(messageString, "quit\n", MAXMSG)) {
 						choppy(messageString);
 						transaction = fopen(messageString, "r");
 						fread(messageString, MAXMSG, 1, transaction);
 						writeMessage(sock, messageString);
 					}
-					else
-					{
+					else {
 						close(sock);
 						exit(EXIT_SUCCESS);
 					}
 					fflush(stdin);
 				}
-				else if(i==sock)
-				{
-					if(!(readMessage(sock)))
-					{
+				else if(i==sock) {
+					if(!(readMessage(sock))) {
                         perror("Connection closed by server!\n");
                         exit(EXIT_FAILURE);
 					}

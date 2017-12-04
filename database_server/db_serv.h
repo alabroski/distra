@@ -20,8 +20,7 @@ char serverConn[maxConn][hostNameLength];			/* Keeps track of other middlewares'
 int conn_count;				/* conn_count - how many other middlewares are there */
 int dbmutex[256];			/* Symbolic mutex to keep track of access to database variables */
 int database[256];			/* Local memory copy of the database, everything is saved here prior to commiting*/
-struct thread_data
-{
+struct thread_data {
 	int  thread_id;
 	int  socketfd;
 	char buffer[MAXMSG];

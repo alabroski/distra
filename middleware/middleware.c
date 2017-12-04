@@ -23,8 +23,7 @@ char serverConn[maxConn][hostNameLength];			/* Keeps track of other middlewares'
 char dbServer[hostNameLength];
 int conn_count;				/* conn_count - how many other middlewares are there */
 fd_set processingFdSet;
-struct thread_data
-{
+struct thread_data {
 	int  thread_id;
 	int  socketfd;
 	char buffer[MAXMSG];
@@ -43,15 +42,13 @@ struct thread_data
 * the system replaces that with the machine's
 * actual address.
 */
-int makeSocket(unsigned short int port)
-{
+int makeSocket(unsigned short int port) {
 	int sock;
 	struct sockaddr_in name;
 
 	/* Create a socket. */
 	sock = socket(PF_INET, SOCK_STREAM, 0);
-	if(sock < 0)
-	{
+	if (sock < 0) {
 		perror("Could not create a socket\n");
 		exit(EXIT_FAILURE);
 	}
@@ -67,8 +64,7 @@ int makeSocket(unsigned short int port)
 	*/
 	name.sin_addr.s_addr = htonl(INADDR_ANY);
 	/* Assign an address to the socket by calling bind. */
-	if(bind(sock, (struct sockaddr *)&name, sizeof(name)) < 0)
-	{
+	if (bind(sock, (struct sockaddr *)&name, sizeof(name)) < 0) {
 		perror("Could not bind a name to the socket\n");
 		exit(EXIT_FAILURE);
 	}
@@ -77,8 +73,7 @@ int makeSocket(unsigned short int port)
 
 /* initSocketAddress
 * Initialises a sockaddr_in struct given a host name and a port. */
-void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short int port)
-{
+void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short int port) {
 	struct hostent *hostInfo; /* Contains info about the host */
 
 	/* Socket address format set to AF_INET for internet use. */
@@ -89,8 +84,7 @@ void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short 
 
 	/* Get info about host. */
 	hostInfo = gethostbyname(hostName);
-	if(hostInfo == NULL)
-	{
+	if (hostInfo == NULL) {
 		fprintf(stderr, "initSocketAddress - Unknown host %s\n",hostName);
 		exit(EXIT_FAILURE);
 	}
@@ -99,16 +93,14 @@ void initSocketAddress(struct sockaddr_in *name, char *hostName, unsigned short 
 }
 
 /* Read data from FD <int fileDescriptor> and put it into <char *buf> */
-int readMessage(int fileDescriptor, char *buf)
-{
+int readMessage(int fileDescriptor, char *buf) {
 	int nOfBytes;
 	nOfBytes = read(fileDescriptor, buf, MAXMSG);
-	if(nOfBytes < 0)
-	{
+	if (nOfBytes < 0) {
 		perror("Could not read data from client\n");
 		return (-2);
 	}
-	else if(nOfBytes == 0)
+	else if (nOfBytes == 0)
 	/* End of file */
 	return(-1);
 	else
@@ -117,13 +109,11 @@ int readMessage(int fileDescriptor, char *buf)
 }
 
 /* Write the message <char *message> onto FD <int fileDescriptor> */
-void writeMessage(int fileDescriptor, char *message)
-{
+void writeMessage(int fileDescriptor, char *message) {
 	int nOfBytes;
 
 	nOfBytes = write(fileDescriptor, message, strlen(message) + 1);
-	if(nOfBytes < 0)
-	{
+	if (nOfBytes < 0) {
 		perror("writeMessage - Could not write data\n");
 		exit(EXIT_FAILURE);
 	}
@@ -131,19 +121,16 @@ void writeMessage(int fileDescriptor, char *message)
 
 /* Checks if the string b is present in the array of strings a
 if yes, returns 1, else 0 */
-int checkArray(char a[][hostNameLength], int num, char *b)
-{
+int checkArray(char a[][hostNameLength], int num, char *b) {
 	int i;
-	for(i=0;i<num;i++)
-	{
+	for(i=0;i<num;i++) {
 		if(!(strcmp(a[i],b)))
 		return 1;
 	}
 	return 0;
 }
 
-int dbserverConnectAndTransferTransaction(char *transaction)
-{
+int dbserverConnectAndTransferTransaction(char *transaction) {
 	char hostName[hostNameLength];
 	int dbsock;
 	struct sockaddr_in serverName;
@@ -151,14 +138,12 @@ int dbserverConnectAndTransferTransaction(char *transaction)
 	strncpy(hostName, dbServer, hostNameLength);
 	hostName[hostNameLength - 1] = '\0';
 	dbsock = socket(PF_INET, SOCK_STREAM, 0);
-	if( dbsock < 0 )
-	{
+	if( dbsock < 0 ) {
 		perror("Could not create a socket\n");
 		exit(EXIT_FAILURE);
 	}
 	initSocketAddress(&serverName, hostName, PORT_DB);
-	if(connect(dbsock, (struct sockaddr *)&serverName, sizeof(serverName)) < 0)
-	{
+	if(connect(dbsock, (struct sockaddr *)&serverName, sizeof(serverName)) < 0) {
 		perror("Could not connect to database server\n");
 		exit(EXIT_FAILURE);
 	}
@@ -168,8 +153,7 @@ int dbserverConnectAndTransferTransaction(char *transaction)
 }
 
 /* Thread handle for incoming communication from another middleware */
-void * handle_middleware(void * args)
-{
+void * handle_middleware(void * args) {
 	int flag, i, j;
 	char controlMsgs[MAXMSG];
 	int dbsock;
@@ -190,28 +174,23 @@ void * handle_middleware(void * args)
 	FD_SET(dbsock, &tempFdSet);
 	readFdSet = tempFdSet;
 	printf("Checkpoint - waiting for answer from database server (middleware)!\n");
-	while(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0)
-	{
+	while(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
 		perror("Select failed\n");
 		readFdSet = tempFdSet;
 		continue;
 	}
-	if( FD_ISSET(dbsock, &readFdSet) )
-	{
+	if (FD_ISSET(dbsock, &readFdSet)) {
 		j = readMessage(dbsock, controlMsgs);
-		if( (j < 0) || (controlMsgs[0] == '0') )	//Abort
-		{
+		if ((j < 0) || (controlMsgs[0] == '0')) {	//Abort
 			printf("Received abort from dbserv, sending abort to coordinator! (middleware)\n");
 			writeMessage(t.socketfd, "0");
 		}
-		else if(controlMsgs[0] == '1')
-		{
+		else if (controlMsgs[0] == '1') {
 			printf("Locks acquired! (middleware)!\n");
 			writeMessage(t.socketfd, "1");
 		}
 	}
-	else	//Select unblocked due to unknown reasons
-	{
+	else {	//Select unblocked due to unknown reasons
 		printf("Select unblocked due to unknown reasons (middleware).\n");
 		writeMessage(dbsock, "0");
 		writeMessage(t.socketfd, "0");
@@ -222,30 +201,25 @@ void * handle_middleware(void * args)
 	FD_ZERO(&tempFdSet);
 	FD_SET(t.socketfd, &tempFdSet);
 	readFdSet = tempFdSet;
-	while(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0)
-	{
+	while (select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
 		perror("Select failed\n");
 		readFdSet = tempFdSet;
 		continue;
 	}
-	if(FD_ISSET(t.socketfd, &readFdSet))
-	{
+	if (FD_ISSET(t.socketfd, &readFdSet)) {
 		j = readMessage(t.socketfd, controlMsgs);
-		if( (j < 0) || (controlMsgs[0] == '0') )
-		{
+		if( (j < 0) || (controlMsgs[0] == '0') ) {
 			printf("Received abort from coordinator - aborting!\n");
 			writeMessage(dbsock, "0");
 			sleep(1);
 		}
-		else if( (controlMsgs[0] == '1') )
-		{
+		else if (controlMsgs[0] == '1') {
 			printf("Received COMMIT from coordinator - transmitting to database server (middleware)\n");
 			writeMessage(dbsock, "1");
 			sleep(1);
 		}
 	}
-	else	//Select unblocked due to unknown reasons
-	{
+	else {	//Select unblocked due to unknown reasons	
 		printf("Select unblocked due to unknown reasons (middleware).\n");
 		writeMessage(dbsock, "0");
 	}
@@ -257,8 +231,7 @@ void * handle_middleware(void * args)
 }
 
 /* Thread handle for incoming communication from a client */
-void * handle_client(void * args)
-{
+void * handle_client(void * args) {
 	int flag, i, j, k, dbabort;
 	char hostName[hostNameLength], controlMsgs[MAXMSG];
 	int serversock[maxConn], dbsock;	/* File descriptors for socket connections to other middlewares */
@@ -279,19 +252,16 @@ void * handle_client(void * args)
 	i = 0;
 	FD_ZERO(&serverFdSet);
 	/* Initiating the connection to other middlewares and transmitting the transaction */
-	while( i<conn_count )
-	{
+	while (i<conn_count) {
 		strncpy(hostName, serverConn[i], hostNameLength);
 		hostName[hostNameLength - 1] = '\0';
 		serversock[i] = socket(PF_INET, SOCK_STREAM, 0);	//Creating a socket for the connection
-		if( serversock[i] < 0 )
-		{
+		if (serversock[i] < 0) {
 			perror("Could not create a socket\n");
 			exit(EXIT_FAILURE);
 		}
 		initSocketAddress(&serverName, hostName, PORT);		//The remote socket to connect to
-		if(connect(serversock[i], (struct sockaddr *)&serverName, sizeof(serverName)) < 0)
-		{
+		if (connect(serversock[i], (struct sockaddr *)&serverName, sizeof(serverName)) < 0) {
 			perror("Could not connect to server\n");
 			exit(EXIT_FAILURE);
 		}
@@ -310,25 +280,21 @@ void * handle_client(void * args)
 	FD_SET(dbsock, &tempFdSet);
 	readFdSet = tempFdSet;
 	printf("Checkpoint - waiting for answer from database server (client)!\n");
-	while((select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL)) <= 0)
-	{
+	while (select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
 		perror("Select failed\n");
 		readFdSet = tempFdSet;
 		continue;
 	}
-	if(FD_ISSET(dbsock, &readFdSet))
-	{
+	if (FD_ISSET(dbsock, &readFdSet)) {
 		j = readMessage(dbsock, controlMsgs);
-		if( (j < 0) || (controlMsgs[0] == '0') )	//Abort
-		{
+		if ((j < 0) || (controlMsgs[0] == '0')) {	//Abort
             printf("Received abort from dbserv! (client)\n");
 			dbabort=0;
 		}
-		else if(controlMsgs[0] == '1')
+		else if (controlMsgs[0] == '1')
 			printf("Locks acquired! (client)!\n");
 	}
-	else	//Select unblocked due to unknown reasons
-	{
+	else {	//Select unblocked due to unknown reasons
 		printf("Select unblocked due to unknown reasons (client).\n");
 		dbabort=0;
 	}
@@ -338,20 +304,16 @@ void * handle_client(void * args)
 	flag = 1; i = 0;
 	/* Getting the answers from the other middlewares (on the attempt to lock the required mutexes) */
 	printf("Waiting for the answers from the other middlewares timeout sec: %d\n", tv.tv_sec);
-	while( i<conn_count && flag )
-	{
+	while ((i<conn_count) && flag) {
 		readFdSet = serverFdSet;
-		while( 1 )
-		{
+		while (1) {
 			i = select(FD_SETSIZE, &readFdSet, NULL, NULL, &tv);
-			if(i < 0)
-			{
+			if(i < 0) {
 				perror("Select failed\n");
 				readFdSet = tempFdSet;
 				continue;
 			}
-			if(i == 0)
-			{
+			if(i == 0) {
 				printf("Wait timeout!\n");
 				flag = 0;
 				break;
@@ -359,21 +321,17 @@ void * handle_client(void * args)
 			else
 				break;
 		}
-		for(k = 0; ((k < conn_count) && flag); k++)
-		{
-			if(FD_ISSET(serversock[k], &readFdSet))
-			{
+		for (k = 0; ((k < conn_count) && flag); k++) {
+			if (FD_ISSET(serversock[k], &readFdSet)) {
 				i++;
 				FD_CLR(serversock[k], &serverFdSet);
 				j = readMessage(serversock[k], controlMsgs);
-				if( j < 0 )
-				{
+				if ( j < 0 ) {
 					perror("Error while trying to read data from middleware socket (inthread)!\n");
 					flag = 0;
 					break;
 				}
-				if( controlMsgs[0] == '0' )	//Answer received - abort
-				{
+				if (controlMsgs[0] == '0') {	//Answer received - abort
 					flag = 0;
 					break;
 				}
@@ -384,10 +342,9 @@ void * handle_client(void * args)
 
 	i = 0;
 	/* If everyone is ready to commit, send message and commit */
-	if( flag && dbabort )
-	{
+	if (flag && dbabort) {
 		printf("Ready to commit! Transmitting permission to all middlewares!\n");
-		while( i<conn_count )		//Transmitting permission to commit to all other middlewares
+		while (i<conn_count)		//Transmitting permission to commit to all other middlewares
 			writeMessage(serversock[i++], "1");
 		writeMessage(dbsock, "1");
 		writeMessage(t.socketfd, "Transaction successful!\n");
@@ -395,14 +352,12 @@ void * handle_client(void * args)
 	/* End of transaction commit */
 
 	/* If any of the other middlewares have voted abort */
-	else
-	{
-		if(!dbabort)
+	else {
+		if (!dbabort)
 			printf("Abort received from database server\n");
 		else
         	printf("Received abort from one of the middlewares (or select timeout), retrying!\n");
-		while( i<conn_count )
-		{
+		while (i<conn_count) {
 			writeMessage(serversock[i], "0");
             		close(serversock[i++]);
 		}
@@ -414,8 +369,7 @@ void * handle_client(void * args)
 	pthread_exit(NULL);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int sock, clientSocket; 		/* Incoming connections (sock) and communication initialization (clientSocket) */
 	int i, j;
 	char hostName[hostNameLength];		/* Temporary string used to keep IP addresses */
@@ -437,8 +391,7 @@ int main(int argc, char *argv[])
 	/* Create a socket and set it up to accept connections */
 	sock = makeSocket(PORT);
 	/* Listen for connection requests from clients */
-	if(listen(sock,3) < 0)
-	{
+	if (listen(sock,3) < 0) {
 		perror("Could not listen for connections\n");
 		exit(EXIT_FAILURE);
 	}
@@ -452,59 +405,49 @@ int main(int argc, char *argv[])
 	conn_count=argc-1;
 
 	/* Copy other middlewares' IP addresses to a global array */
-	while(j<conn_count)
+	while (j<conn_count)
 		strncpy(serverConn[j++], argv[j+1], hostNameLength);
 
-	while(1)
-	{
+	while (1) {
 		/* Block until input arrives on one or more active sockets FD_SETSIZE is a constant with value = 1024 */
 		readFdSet = activeFdSet;
-		if(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0)
-		{
+		if (select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
 			perror("Select failed\n");
 			continue;
 		}
 
 		/* Service all the sockets with input pending */
-		for(i = 0; i < FD_SETSIZE; ++i)
-		{
-			if(FD_ISSET(i, &readFdSet))
-			{
+		for (i = 0; i < FD_SETSIZE; ++i) {
+			if (FD_ISSET(i, &readFdSet)) {
 				/* Incoming connection on original socket */
-				if(i == sock)
-				{
+				if (i == sock) {
 					size = sizeof(clientName);
 					clientSocket = accept(sock, (struct sockaddr *)&clientName, &size);
-					if(clientSocket < 0)
-					{
+					if(clientSocket < 0) {
 						perror("Could not accept connection\n");
 						exit(EXIT_FAILURE);
 					}
 					strcpy(hostName,inet_ntoa(clientName.sin_addr));
 
 					/* Middleware initiating connection */
-					if((checkArray(serverConn, conn_count, hostName)))
-					{
+					if((checkArray(serverConn, conn_count, hostName))) {
 						printf("Incoming connection from server %s, port %hd\n", inet_ntoa(clientName.sin_addr), ntohs(clientName.sin_port));
 						FD_SET(clientSocket, &activeFdSet);
 						FD_SET(clientSocket, &serverFdSet);
 					}
 					/* Client initiating connection */
-					else
-					{
+					else {
 						printf("Incoming connection from client %s, port %hd\n", inet_ntoa(clientName.sin_addr), ntohs(clientName.sin_port));
 						FD_SET(clientSocket, &activeFdSet);
 					}
 				}
 				/* Incoming transaction from a client */
-				else if( (!FD_ISSET(i, &processingFdSet)) && (!FD_ISSET(i, &serverFdSet)) )
-				{
+				else if (!FD_ISSET(i, &processingFdSet) && !FD_ISSET(i, &serverFdSet)) {
 					t[thread_counter].thread_id=thread_counter;
 					t[thread_counter].socketfd=i;
 					FD_SET(i, &processingFdSet);
 					j = readMessage(i, t[thread_counter].buffer);
-					if(j<0)
-					{
+					if (j<0) {
 						perror("Error while trying to read data from client socket!\n");
 						exit(-1);
 					}
@@ -514,13 +457,11 @@ int main(int argc, char *argv[])
 					thread_counter%=maxConn;
 				}
 				/* Incoming transaction from another middleware */
-				else if (FD_ISSET(i, &serverFdSet))
-				{
+				else if (FD_ISSET(i, &serverFdSet)) {
 					t[thread_counter].thread_id=thread_counter;
 					t[thread_counter].socketfd=clientSocket;
 					j = readMessage(i, t[thread_counter].buffer);
-					if( j<0 )
-					{
+					if( j<0 ) {
 						perror("Error while trying to read data from middleware socket!\n");
 						exit(-1);
 					}
