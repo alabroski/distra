@@ -138,12 +138,12 @@ int dbserverConnectAndTransferTransaction(char *transaction) {
 	strncpy(hostName, dbServer, hostNameLength);
 	hostName[hostNameLength - 1] = '\0';
 	dbsock = socket(PF_INET, SOCK_STREAM, 0);
-	if( dbsock < 0 ) {
+	if (dbsock < 0) {
 		perror("Could not create a socket\n");
 		exit(EXIT_FAILURE);
 	}
 	initSocketAddress(&serverName, hostName, PORT_DB);
-	if(connect(dbsock, (struct sockaddr *)&serverName, sizeof(serverName)) < 0) {
+	if (connect(dbsock, (struct sockaddr *)&serverName, sizeof(serverName)) < 0) {
 		perror("Could not connect to database server\n");
 		exit(EXIT_FAILURE);
 	}
@@ -174,7 +174,7 @@ void * handle_middleware(void * args) {
 	FD_SET(dbsock, &tempFdSet);
 	readFdSet = tempFdSet;
 	printf("Checkpoint - waiting for answer from database server (middleware)!\n");
-	while(select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
+	while (select(FD_SETSIZE, &readFdSet, NULL, NULL, NULL) <= 0) {
 		perror("Select failed\n");
 		readFdSet = tempFdSet;
 		continue;
@@ -252,7 +252,7 @@ void * handle_client(void * args) {
 	i = 0;
 	FD_ZERO(&serverFdSet);
 	/* Initiating the connection to other middlewares and transmitting the transaction */
-	while (i<conn_count) {
+	while (i < conn_count) {
 		strncpy(hostName, serverConn[i], hostNameLength);
 		hostName[hostNameLength - 1] = '\0';
 		serversock[i] = socket(PF_INET, SOCK_STREAM, 0);	//Creating a socket for the connection
@@ -308,12 +308,12 @@ void * handle_client(void * args) {
 		readFdSet = serverFdSet;
 		while (1) {
 			i = select(FD_SETSIZE, &readFdSet, NULL, NULL, &tv);
-			if(i < 0) {
+			if (i < 0) {
 				perror("Select failed\n");
 				readFdSet = tempFdSet;
 				continue;
 			}
-			if(i == 0) {
+			if (i == 0) {
 				printf("Wait timeout!\n");
 				flag = 0;
 				break;
@@ -321,12 +321,12 @@ void * handle_client(void * args) {
 			else
 				break;
 		}
-		for (k = 0; ((k < conn_count) && flag); k++) {
+		for (k = 0; (k < conn_count) && flag; k++) {
 			if (FD_ISSET(serversock[k], &readFdSet)) {
 				i++;
 				FD_CLR(serversock[k], &serverFdSet);
 				j = readMessage(serversock[k], controlMsgs);
-				if ( j < 0 ) {
+				if (j < 0) {
 					perror("Error while trying to read data from middleware socket (inthread)!\n");
 					flag = 0;
 					break;
@@ -357,7 +357,7 @@ void * handle_client(void * args) {
 			printf("Abort received from database server\n");
 		else
         	printf("Received abort from one of the middlewares (or select timeout), retrying!\n");
-		while (i<conn_count) {
+		while (i < conn_count) {
 			writeMessage(serversock[i], "0");
             		close(serversock[i++]);
 		}
@@ -405,7 +405,7 @@ int main(int argc, char *argv[]) {
 	conn_count=argc-1;
 
 	/* Copy other middlewares' IP addresses to a global array */
-	while (j<conn_count)
+	while (j < conn_count)
 		strncpy(serverConn[j++], argv[j+1], hostNameLength);
 
 	while (1) {
